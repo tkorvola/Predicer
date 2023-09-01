@@ -17,6 +17,7 @@ Struct used for storing information about the timesteps in the model.
 - `is_variable_dt::Bool`: FLag indicating whether the timesteps vary in length. Default false. 
 - `variable_dt::Vector{Tuple{String, Float64}}`: Vector containing the length between timesteps compared to one hour. The first element is the length between t_1 and t_2.
 """
+
 mutable struct Temporals
     t::Vector{String}
     dtf::Float64
@@ -1008,9 +1009,6 @@ struct GenConstraint
     penalty::Float64
     factors::Vector{ConFactor}
     constant::TimeSeriesData
-    function GenConstraint(name,type,is_setpoint=false, penalty=0.0)
-        return new(name,type,is_setpoint, penalty, [], TimeSeriesData())
-    end
 end
 
 
@@ -1128,4 +1126,146 @@ mutable struct InputData
         return new(temporals, contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories, markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
     end
 end
+
+
+"""Esyn lisäämät"""
+
+processes_h = OrderedDict{String, Process}()
+nodes_h = OrderedDict{String, Node}()
+markets_h = OrderedDict{String, Market}()
+groups_h = OrderedDict{String, Group}()
+time_series = Vector{TimeSeries}()
+inflowblocks_h = OrderedDict{String, InflowBlock}()
+genconstraints_h = OrderedDict{String, GenConstraint}()
+
+function print_message(d1::Int, d2::Int, d3::Int, d4::Int)
+
+    println(d1)
+    println(d2)
+    println(d3)
+    println(d4)
+
+end
+
+function print_ordered_dict(ordered_dict::OrderedDict)
+    for (key, value) in ordered_dict
+        println("Key: $key, Value: $value")
+    end
+end
+
+"""adding the timeseries should be in this same funcgion? what is that nothing-part?"""
+
+function create_node(name::String, is_commodity::Bool=false, is_market::Bool=false)
+    if is_commodity == true && is_market == true
+        error("A Node cannot be a commodity and a market at the same time!")
+    else
+        return Node(name, [], is_commodity, is_market, false, false, false, nothing, TimeSeriesData(), TimeSeriesData())
+    end
+end
+
+function add_to_nodes(node::Node)
+
+    push!(nodes_h, node.name => node)
+
+end
+
+function create_process(name::String, conversion::Int=1, delay::Float64=0.0)
+    return Process(name, [], conversion, delay, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
+end
+
+function add_to_processes(process::Process)
+
+    push!(processes_h, process.name => process)
+
+end
+
+function create_market(name::String, type::String, node::String, pgroup::String, direction::String, reserve_type::String, is_bid::Bool, is_limited::Bool, min_bid::Float64, max_bid::Float64, fee::Float64)
+    return Market(name, type, node, pgroup, direction, Dict(), reserve_type, is_bid,  is_limited, min_bid, max_bid, fee, TimeSeriesData(), TimeSeriesData(), TimeSeriesData(), [])
+end
+
+function add_to_markets(market::Market)
+
+    push!(markets_h, market.name => market)
+
+end
+
+function create_group(name::String, type::String, member::String)
+
+    return Group(name, type, [member])
+
+end
+
+function add_to_groups(group::Group)
+
+    push!(groups_h, group.name => group)
+
+end
+
+function create_genconstraint(name::String,type::String,is_setpoint=false, penalty=0.0)
+
+    return GenConstraint(name,type,is_setpoint, penalty, [], TimeSeriesData())
+
+end
+
+
+function add_to_genconstraints(genconstraint::GenConstraint)
+
+    push!(genconstraints_h, genconstraint.name => genconstraint)
+
+end
+
+function return_inflowblocks()
+
+    return inflowblocks_h
+
+end
+
+
+function create_timeseriesdata()
+
+    series_data1 = [("2022-04-20T00:00:00+00:00", 298.15), ("2022-04-20T01:00:00+00:00", 298.15),("2022-04-20T02:00:00+00:00", 298.15), ("2022-04-20T03:00:00+00:00", 298.15), ("2022-04-20T04:00:00+00:00", 298.15), ("2022-04-20T05:00:00+00:00", 298.15), ("2022-04-20T06:00:00+00:00", 298.15), ("2022-04-20T07:00:00+00:00", 298.15), ("2022-04-20T08:00:00+00:00", 298.15), ("2022-04-20T09:00:00+00:00", 298.15)]
+    series_data2 = [("2022-04-20T00:00:00+00:00", 298.15), ("2022-04-20T01:00:00+00:00", 298.15), ("2022-04-20T02:00:00+00:00", 298.15), ("2022-04-20T03:00:00+00:00", 298.15), ("2022-04-20T04:00:00+00:00", 298.15), ("2022-04-20T05:00:00+00:00", 298.15), ("2022-04-20T06:00:00+00:00", 298.15), ("2022-04-20T07:00:00+00:00", 298.15), ("2022-04-20T08:00:00+00:00", 298.15), ("2022-04-20T09:00:00+00:00", 298.15)]
+
+    time_series1 = TimeSeries("s1", series_data1)
+    time_series2 = TimeSeries("s2", series_data2)
+
+    new_time_series_data = TimeSeriesData([time_series1, time_series2])
+
+    return new_time_series_data
+
+end
+
+function create_temporals()
+
+    temps = 
+    ["2022-04-20T00:00:00+00:00",
+    "2022-04-20T01:00:00+00:00",
+    "2022-04-20T02:00:00+00:00",
+    "2022-04-20T03:00:00+00:00",
+    "2022-04-20T04:00:00+00:00",
+    "2022-04-20T05:00:00+00:00",
+    "2022-04-20T06:00:00+00:00",
+    "2022-04-20T07:00:00+00:00",
+    "2022-04-20T08:00:00+00:00",
+    "2022-04-20T09:00:00+00:00"]
+
+    return temps
+
+end
+
+function process_nodes(nodes::OrderedDict{String, Node})
+    for (key, value) in nodes
+        # Print the cost data for each Node
+        println("Key: $(key)")
+        println("Value: $(value)")
+    end
+end
+
+function create_inputdata(contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_delay, processes, nodes, markets, groups, scenarios, reserve_type, risk, inflow_blocks, gen_constraints)
+
+    return  Predicer.InputData(Predicer.Temporals(unique(sort(create_temporals()))), contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_delay, contains_diffusion,  processes, nodes, node_diffusion_tuples, markets, groups, scenarios, reserve_type, risk, inflow_blocks, gen_constraints)
+
+end
+
+
 
