@@ -916,9 +916,11 @@ struct Market
     up_price::TimeSeriesData
     down_price::TimeSeriesData
     fixed::Vector{Tuple{AbstractString, Number}}
+    """
     function Market(name, type, node, pgroup, direction, reserve_type, is_bid, is_limited, min_bid, max_bid, fee)
         return new(name, type, node, pgroup, direction, Dict(), reserve_type, is_bid,  is_limited, min_bid, max_bid, fee, TimeSeriesData(), TimeSeriesData(), TimeSeriesData(), [])
     end
+    """
 end
 
 
@@ -1169,8 +1171,14 @@ function add_to_nodes(node::Node)
 
 end
 
-function create_process(name::String, conversion::Int=1, delay::Float64=0.0)
-    return Process(name, [], conversion, delay, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
+function return_nodes()
+
+    return nodes_h
+
+end
+
+function create_process(name::String, conversion::Int=1)
+    return Process(name, [], conversion, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
 end
 
 function add_to_processes(process::Process)
@@ -1179,13 +1187,25 @@ function add_to_processes(process::Process)
 
 end
 
-function create_market(name::String, type::String, node::String, pgroup::String, direction::String, reserve_type::String, is_bid::Bool, is_limited::Bool, min_bid::Float64, max_bid::Float64, fee::Float64)
+function return_processes()
+
+    return processes_h
+
+end
+
+function create_market2(name::String, type::String, node::String, pgroup::String, direction::String, reserve_type::String, is_bid::Bool, is_limited::Bool, min_bid::Float64, max_bid::Float64, fee::Float64)
     return Market(name, type, node, pgroup, direction, Dict(), reserve_type, is_bid,  is_limited, min_bid, max_bid, fee, TimeSeriesData(), TimeSeriesData(), TimeSeriesData(), [])
 end
 
 function add_to_markets(market::Market)
 
     push!(markets_h, market.name => market)
+
+end
+
+function return_markets()
+
+    return markets_h
 
 end
 
@@ -1201,6 +1221,12 @@ function add_to_groups(group::Group)
 
 end
 
+function return_groups()
+
+    return groups_h
+
+end
+
 function create_genconstraint(name::String,type::String,is_setpoint=false, penalty=0.0)
 
     return GenConstraint(name,type,is_setpoint, penalty, [], TimeSeriesData())
@@ -1211,6 +1237,12 @@ end
 function add_to_genconstraints(genconstraint::GenConstraint)
 
     push!(genconstraints_h, genconstraint.name => genconstraint)
+
+end
+
+function return_genconstraints()
+
+    return genconstraints_h
 
 end
 
