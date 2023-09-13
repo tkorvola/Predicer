@@ -70,6 +70,14 @@ function generate_model(input_data::InputData)
     return mc, input_data
 end
 
+function solve_hertta(input_data::InputData)
+
+    mc, inputdata = generate_model(input_data)
+
+    solve_model(mc)
+
+end
+
 """
 function generate_model(fpath::String, t_horizon::Vector{ZonedDateTime}=ZonedDateTime[])
     # get input_data

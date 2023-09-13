@@ -610,9 +610,6 @@ mutable struct Topology
     ramp_up::Float64
     ramp_down::Float64
     cap_ts::TimeSeriesData
-    function Topology(source::String, sink::String, capacity::Float64, VOM_cost::Float64, ramp_up::Float64, ramp_down::Float64)
-        return new(source, sink, capacity, VOM_cost, ramp_up, ramp_down, TimeSeriesData())
-    end
 end
 
 
@@ -1124,21 +1121,26 @@ mutable struct InputData
     risk::OrderedDict{String, Float64}
     inflow_blocks::OrderedDict{String, InflowBlock}
     gen_constraints::OrderedDict{String, GenConstraint}
+    """
     function InputData(temporals, contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories,  markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
         return new(temporals, contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories, markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
     end
+    """
 end
 
 
 """Esyn lisäämät"""
 
-processes_h = OrderedDict{String, Process}()
-nodes_h = OrderedDict{String, Node}()
-markets_h = OrderedDict{String, Market}()
-groups_h = OrderedDict{String, Group}()
-time_series = Vector{TimeSeries}()
-inflowblocks_h = OrderedDict{String, InflowBlock}()
-genconstraints_h = OrderedDict{String, GenConstraint}()
+global processes_h = OrderedDict{String, Process}()
+global nodes_h = OrderedDict{String, Node}()
+global markets_h = OrderedDict{String, Market}()
+global groups_h = OrderedDict{String, Group}()
+global time_series = Vector{TimeSeries}()
+global inflowblocks_h = OrderedDict{String, InflowBlock}()
+global genconstraints_h = OrderedDict{String, GenConstraint}()
+global node_diffusion_tuples_h = Vector{Tuple{String, String, Float64}}()
+global node_delay_tuples_h = Vector{Tuple{String, String, Float64, Float64, Float64}}()
+global node_histories_h = OrderedDict{String, NodeHistory}()
 
 function print_message(d1::Int, d2::Int, d3::Int, d4::Int)
 
@@ -1177,13 +1179,37 @@ function return_nodes()
 
 end
 
+
+
+function create_topology(source::String, sink::String, capacity::Float64, VOM_cost::Float64, ramp_up::Float64, ramp_down::Float64)
+
+    return Topology(source, sink, capacity, VOM_cost, ramp_up, ramp_down, TimeSeriesData())
+
+end
+
+function add_topology_to_process(p::Process, topo::Topology)
+    push!(p.topos, topo)
+    return p
+end
+
+
 function create_process(name::String, conversion::Int=1)
     return Process(name, [], conversion, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
+end
+
+function print_process_nodes(processes::OrderedDict{String, Process})
+    for (key, value) in processes
+        # Print the cost data for each Node
+        println("Key: $(key)")
+        println("Value: $(value)")
+    end
 end
 
 function add_to_processes(process::Process)
 
     push!(processes_h, process.name => process)
+
+    print_process_nodes(processes_h)
 
 end
 
@@ -1193,7 +1219,7 @@ function return_processes()
 
 end
 
-function create_market2(name::String, type::String, node::String, pgroup::String, direction::String, reserve_type::String, is_bid::Bool, is_limited::Bool, min_bid::Float64, max_bid::Float64, fee::Float64)
+function create_market(name::String, type::String, node::String, pgroup::String, direction::String, reserve_type::String, is_bid::Bool, is_limited::Bool, min_bid::Float64, max_bid::Float64, fee::Float64)
     return Market(name, type, node, pgroup, direction, Dict(), reserve_type, is_bid,  is_limited, min_bid, max_bid, fee, TimeSeriesData(), TimeSeriesData(), TimeSeriesData(), [])
 end
 
@@ -1252,6 +1278,10 @@ function return_inflowblocks()
 
 end
 
+function create_nodehistory(node::AbstractString)
+    return NodeHistory(node, TimeSeriesData())
+end
+
 
 function create_timeseriesdata()
 
@@ -1285,17 +1315,69 @@ function create_temporals()
 
 end
 
-function process_nodes(nodes::OrderedDict{String, Node})
-    for (key, value) in nodes
-        # Print the cost data for each Node
-        println("Key: $(key)")
-        println("Value: $(value)")
-    end
+function create_node_diffusion_tuple(node1::String, node2::String, diff_coeff::Float64)
+
+    tup = (node1, node2, diff_coeff)
+    push!(node_diffusion_tuples_h, tup)
+
 end
 
-function create_inputdata(contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_delay, processes, nodes, markets, groups, scenarios, reserve_type, risk, inflow_blocks, gen_constraints)
+function return_node_diffusion_tuples()
 
-    return  Predicer.InputData(Predicer.Temporals(unique(sort(create_temporals()))), contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_delay, contains_diffusion,  processes, nodes, node_diffusion_tuples, markets, groups, scenarios, reserve_type, risk, inflow_blocks, gen_constraints)
+    return node_diffusion_tuples_h
+
+end
+
+function create_node_delay_tuple(node1::String, node2::String, delay_t::Float64, min_flow::Float64, max_flow::Float64)
+
+    tup = (node1, node2, delay_t, min_flow, max_flow)
+    push!(node_delay_tuples_h, tup)
+
+end
+
+function return_node_delay_tuples()
+
+    return node_delay_tuples_h
+
+end
+
+function return_node_histories()
+
+    return node_histories_h
+
+end
+
+function create_inputdata2(
+    
+    processes::OrderedDict{String, Process}, 
+    nodes::OrderedDict{String, Node}, 
+    node_diffusion::Vector{Tuple{String, String, Float64}}, 
+    node_delay::Vector{Tuple{String, String, Float64, Float64, Float64}}, 
+    node_histories::OrderedDict{String, NodeHistory},  
+    markets::OrderedDict{String, Market}, 
+    groups::OrderedDict{String, Group},
+    gen_constraints::OrderedDict{String, GenConstraint}, 
+    scenarios::OrderedDict{String, Float64}, 
+    reserve_type::OrderedDict{String, Float64}, 
+    risk::OrderedDict{String, Float64}, 
+    inflow__blocks::OrderedDict{String, InflowBlock}, 
+    contains_reserves::Bool, 
+    contains_online::Bool, 
+    contains_states::Bool, 
+    contains_piecewise_eff::Bool, 
+    contains_risk::Bool,
+    contains_delay::Bool,  
+    contains_diffusion::Bool)
+
+    return InputData(Predicer.Temporals(unique(sort(create_temporals()))), contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories, markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
+
+end
+
+function return_data()
+
+    number = 1
+
+    return number
 
 end
 
