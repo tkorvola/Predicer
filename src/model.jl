@@ -305,6 +305,10 @@ end
 
 Function to construct market nodes based on the input data
 """
+
+"""
+Essi: Added TimeSeriesData() to Predicer.Topology
+"""
 function resolve_market_nodes(input_data::InputData)
     markets = input_data.markets
     for m in collect(keys(markets))
@@ -313,8 +317,8 @@ function resolve_market_nodes(input_data::InputData)
             input_data.nodes[node_name] = Predicer.Node(node_name, false, true)
             pname = markets[m].node * "_" * m * "_trade_process"
             market_p = Predicer.MarketProcess(pname)
-            Predicer.add_topology(market_p, Predicer.Topology(markets[m].node, node_name, 0.0, 0.00001, 1.0, 1.0))
-            Predicer.add_topology(market_p, Predicer.Topology(node_name, markets[m].node, 0.0, 0.0, 1.0, 1.0))
+            Predicer.add_topology(market_p, Predicer.Topology(markets[m].node, node_name, 0.0, 0.00001, 1.0, 1.0, TimeSeriesData()))
+            Predicer.add_topology(market_p, Predicer.Topology(node_name, markets[m].node, 0.0, 0.0, 1.0, 1.0, TimeSeriesData()))
             input_data.processes[pname] = market_p
         end
     end

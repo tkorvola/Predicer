@@ -78,6 +78,120 @@ function solve_hertta(input_data::InputData)
 
 end
 
+function print_inputdata(input_data::InputData)
+
+    println("ALKU----------------------------------------------------contains_reserves")
+    println(input_data.contains_reserves)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------contains_online")
+    println(input_data.contains_online)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------contains_states")
+    println(input_data.contains_states)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------contains_piecewise_eff")
+    println(input_data.contains_piecewise_eff)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------contains_risk")
+    println(input_data.contains_risk)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------contains_delay")
+    println(input_data.contains_delay)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------contains_diffusion")
+    println(input_data.contains_diffusion)
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------processes")
+    for (key, value) in input_data.processes
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------nodes")
+    for (key, value) in input_data.nodes
+        println("Key: $key, Value: $value")
+        println("Value: $value.cost.data")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    
+    println("ALKU----------------------------------------------------node_diffusion_tuples")
+
+    for tup in input_data.node_diffusion
+        println(tup)
+    end
+    
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------node_delays")
+
+    for tup in input_data.node_delay
+        println(tup)
+    end
+    
+    println("LOPPU----------------------------------------------------")
+    
+
+    println("ALKU----------------------------------------------------markets")
+    for (key, value) in input_data.markets
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------groups")
+    for (key, value) in input_data.groups
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------gen constraints")
+    for (key, value) in input_data.gen_constraints
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------scenarios")
+    for (key, value) in input_data.scenarios
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------reserve_type")
+    for (key, value) in input_data.reserve_type
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------risk")
+    for (key, value) in input_data.risk
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+    println("ALKU----------------------------------------------------inflow_blocks")
+    for (key, value) in input_data.inflow_blocks
+        println("Key: $key, Value: $value")
+        println("-------------")
+    end
+    println("LOPPU----------------------------------------------------")
+
+end
+
 """
 function generate_model(fpath::String, t_horizon::Vector{ZonedDateTime}=ZonedDateTime[])
     # get input_data

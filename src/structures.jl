@@ -668,6 +668,7 @@ mutable struct Process
     name::String
     groups::Vector{String}
     conversion::Integer # change to string-based: unit_based, market_based, transfer_based
+    delay::Float64
     is_cf::Bool
     is_cf_fix::Bool
     is_online::Bool
@@ -698,8 +699,8 @@ The constructor for the Process struct.
 - `name::String`: The name of the process.
 - `conversion::Int`: Used to differentiate between types of process. 1 = unit based, 2 = transfer process, 3 = market process.
 """
-function Process(name::String, conversion::Int=1)
-    return Process(name, [], conversion, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
+function Process(name::String, conversion::Int=1, delay::Float64=0.0)
+    return Process(name, [], conversion, delay, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
 end
 
 
@@ -896,7 +897,7 @@ A struct for markets.
 - `price::TimeSeriesData`: Vector containing TimeSeries of the market price in different scenarios. 
 - `fixed::Vector{Tuple{AbstractString, Number}}`: Vector containing information on the market being fixed. 
 """
-struct Market
+mutable struct Market
     name::String
     type::String
     node::AbstractString
@@ -938,13 +939,15 @@ Struct for general constraints factors.
 - `var_tuple::Tuple{AbstractString, AbstractString}`: Name/ID of the variable. (p, flow) for v_flow, (n, "") for v_state and (p, "") for v_online.
 - `data::TimeSeriesData`: Timeseries containing the coefficients for the variable. 
 """
-struct ConFactor
+mutable struct ConFactor
     var_type::String
     var_tuple::Tuple{AbstractString, AbstractString}
     data::TimeSeriesData
+    """
     function ConFactor(var_type, var_tuple)
         return new(var_type, var_tuple, TimeSeriesData())
     end
+    """
 end
 
 
@@ -1001,7 +1004,7 @@ Struct for general constraints.
 - `factors::Vector{ConFactor}`: Vector of ConFactors. 
 - `constant::TimeSeriesData`: TimeSeries?
 """
-struct GenConstraint
+mutable struct GenConstraint
     name::String
     type::String
     is_setpoint::Bool
@@ -1159,11 +1162,11 @@ end
 
 """adding the timeseries should be in this same funcgion? what is that nothing-part?"""
 
-function create_node(name::String, is_commodity::Bool=false, is_market::Bool=false)
+function create_node(name::String, is_commodity::Bool=false, is_market::Bool=false, is_inflow::Bool=false, is_state::Bool=false)
     if is_commodity == true && is_market == true
         error("A Node cannot be a commodity and a market at the same time!")
     else
-        return Node(name, [], is_commodity, is_market, false, false, false, nothing, TimeSeriesData(), TimeSeriesData())
+        return Node(name, [], is_commodity, is_market, is_state, false, is_inflow, nothing, TimeSeriesData(), TimeSeriesData())
     end
 end
 
@@ -1187,14 +1190,15 @@ function create_topology(source::String, sink::String, capacity::Float64, VOM_co
 
 end
 
-function add_topology_to_process(p::Process, topo::Topology)
-    push!(p.topos, topo)
-    return p
+
+function create_process(name::String, conversion::Int=1, delay::Float64=0.0)
+    return Process(name, [], conversion, delay, false, false, false, false, 1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), AbstractString[], Tuple{Number, Number}[])
 end
 
+function add_group_to_process(p::Process, group::String)
 
-function create_process(name::String, conversion::Int=1)
-    return Process(name, [], conversion, false, false, false, false, -1.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, true, [], TimeSeriesData(), TimeSeriesData(), [], [])
+    push!(p.groups, group)
+
 end
 
 function print_process_nodes(processes::OrderedDict{String, Process})
@@ -1209,8 +1213,6 @@ function add_to_processes(process::Process)
 
     push!(processes_h, process.name => process)
 
-    print_process_nodes(processes_h)
-
 end
 
 function return_processes()
@@ -1219,8 +1221,63 @@ function return_processes()
 
 end
 
+function topo_test(p::Process)
+
+    println(length(p.topos))
+
+end
+
 function create_market(name::String, type::String, node::String, pgroup::String, direction::String, reserve_type::String, is_bid::Bool, is_limited::Bool, min_bid::Float64, max_bid::Float64, fee::Float64)
     return Market(name, type, node, pgroup, direction, Dict(), reserve_type, is_bid,  is_limited, min_bid, max_bid, fee, TimeSeriesData(), TimeSeriesData(), TimeSeriesData(), [])
+end
+
+function create_vartuple(s1::String, s2::String)
+
+    return (s1, s2)
+
+end
+
+function create_confactor(vartype::String, vartuple::Tuple{String, String})
+
+    return ConFactor(vartype, vartuple, TimeSeriesData())
+
+end
+
+function add_ts_to_confactor(confactor::ConFactor, timeseriesdata::TimeSeriesData)
+
+    confactor.data = timeseriesdata
+
+end
+
+function add_market_prices(market::Market, price::TimeSeriesData)
+
+    market.price = price
+
+end
+
+function add_confactor_to_gc(confactor::ConFactor, gen_constraint::GenConstraint)
+
+    push!(gen_constraint.factors, confactor)
+
+
+end
+
+function add_market_up_prices(market::Market, price::TimeSeriesData)
+
+    market.up_price = price
+
+end
+
+function add_market_down_prices(market::Market, price::TimeSeriesData)
+
+    market.down_price = price
+
+end
+
+function add_gc_constants(genconstraint::GenConstraint, constants::TimeSeriesData)
+
+    genconstraint.constant = constants
+
 end
 
 function add_to_markets(market::Market)
@@ -1282,18 +1339,39 @@ function create_nodehistory(node::AbstractString)
     return NodeHistory(node, TimeSeriesData())
 end
 
+function make_time_point(time_stamp::String, value::Number)
+
+    return (time_stamp, value)
+
+end
+
+function create_timeseries(scenario::String)
+
+    return TimeSeries(scenario, Vector{Tuple{AbstractString, Number}}[])
+
+end
+
+function push_time_point(time_series::TimeSeries, time_point::Tuple{AbstractString, Number})
+
+    push!(time_series.series, time_point)
+
+end
 
 function create_timeseriesdata()
 
-    series_data1 = [("2022-04-20T00:00:00+00:00", 298.15), ("2022-04-20T01:00:00+00:00", 298.15),("2022-04-20T02:00:00+00:00", 298.15), ("2022-04-20T03:00:00+00:00", 298.15), ("2022-04-20T04:00:00+00:00", 298.15), ("2022-04-20T05:00:00+00:00", 298.15), ("2022-04-20T06:00:00+00:00", 298.15), ("2022-04-20T07:00:00+00:00", 298.15), ("2022-04-20T08:00:00+00:00", 298.15), ("2022-04-20T09:00:00+00:00", 298.15)]
-    series_data2 = [("2022-04-20T00:00:00+00:00", 298.15), ("2022-04-20T01:00:00+00:00", 298.15), ("2022-04-20T02:00:00+00:00", 298.15), ("2022-04-20T03:00:00+00:00", 298.15), ("2022-04-20T04:00:00+00:00", 298.15), ("2022-04-20T05:00:00+00:00", 298.15), ("2022-04-20T06:00:00+00:00", 298.15), ("2022-04-20T07:00:00+00:00", 298.15), ("2022-04-20T08:00:00+00:00", 298.15), ("2022-04-20T09:00:00+00:00", 298.15)]
+    return TimeSeriesData()
 
-    time_series1 = TimeSeries("s1", series_data1)
-    time_series2 = TimeSeries("s2", series_data2)
+end
 
-    new_time_series_data = TimeSeriesData([time_series1, time_series2])
+function push_timeseries(timeseriesdata::TimeSeriesData, timeseries::TimeSeries)
 
-    return new_time_series_data
+    push!(timeseriesdata.ts_data, timeseries)
+
+end
+
+function add_inflow_to_node(node::Node, timeseriesdata::TimeSeriesData)
+
+    node.inflow = timeseriesdata
 
 end
 
@@ -1312,6 +1390,12 @@ function create_temporals()
     "2022-04-20T09:00:00+00:00"]
 
     return temps
+
+end
+
+function create_state(in_max, out_max, state_loss_proportional, state_max, state_min=0, initial_state=0, is_temp=0, T_E_conversion=1, residual_value=0)
+
+    return State(in_max, out_max, state_loss_proportional, state_max, state_min, initial_state, is_temp, T_E_conversion, residual_value)
 
 end
 
@@ -1370,14 +1454,6 @@ function create_inputdata2(
     contains_diffusion::Bool)
 
     return InputData(Predicer.Temporals(unique(sort(create_temporals()))), contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories, markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
-
-end
-
-function return_data()
-
-    number = 1
-
-    return number
 
 end
 
