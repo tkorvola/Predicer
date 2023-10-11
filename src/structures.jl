@@ -1431,7 +1431,7 @@ function return_node_histories()
 
 end
 
-function create_inputdata2(
+function create_inputdata(
     
     processes::OrderedDict{String, Process}, 
     nodes::OrderedDict{String, Node}, 
