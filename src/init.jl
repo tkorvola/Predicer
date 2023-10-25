@@ -67,16 +67,76 @@ function generate_model(input_data::InputData)
     mc["model"] = setup_optimizer(HiGHS.Optimizer)
     # build model
     build_model(mc, input_data)
-    return mc, input_data
+    """return mc, input_data"""
+    return mc
 end
 
 function solve_hertta(input_data::InputData)
 
-    mc, inputdata = generate_model(input_data)
+    print_inputdata(input_data)
+
+    mc = generate_model(input_data)
 
     solve_model(mc)
 
+    df = get_result_df(mc, input_data, "v_flow", "electricheater", "s1")
+
+    return df
+
+    """convert_df_to_vector(df)"""
+
+    """get_process_data(mc, input_data, "v_state", "electricheater", "s1")"""
+
 end
+
+function get_result_df(mc::OrderedDict, input_data::Predicer.InputData, type::String, process::String, scenario::String)
+
+    df = get_result_dataframe(mc, input_data, type, process, scenario)
+    return df
+
+end
+
+function convert_df_to_vector(df::DataFrame)
+    num_rows = size(df, 1)
+    tuples_vector = [(df[i, 1], df[i, 2]) for i in 1:num_rows]
+    return tuples_vector
+end
+
+function get_vec_length(vec::Vector{Tuple{String, Float64}})
+
+    vector_length = length(vec)
+    return vector_length
+
+end
+
+function print_type(x)
+    println("The type of x is: ", typeof(x))
+end
+
+function get_first_tuple_value(vec::Vector{Tuple{String, Float64}})
+    # Check if the vector is not empty
+    if length(vec) > 0
+        println(vec[1][1])
+        return vec[1][1]
+    else
+        error("The vector is empty.")
+    end
+end
+
+function get_value(vec::Vector{Tuple{String, Float64}}, i::Integer, j::Integer)
+
+    if 1 <= i <= length(vec)
+        return vec[i][j]
+    else
+        throw(ArgumentError("Index i is out of bounds for the given vector."))
+    end
+
+end
+
+function create_array()
+    return [1, 2, 3, 4]
+end
+
 
 function print_inputdata(input_data::InputData)
 
