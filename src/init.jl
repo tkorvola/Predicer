@@ -96,6 +96,14 @@ function get_result_df(mc::OrderedDict, input_data::Predicer.InputData, type::St
 
 end
 
+function extract_column_as_vector(df::DataFrame, column_name::String)
+    if hasproperty(df, column_name)
+        return df[!, column_name]
+    else
+        throw(ArgumentError("Column '$(column_name)' not found in DataFrame"))
+    end
+end
+
 function convert_df_to_vector(df::DataFrame)
     num_rows = size(df, 1)
     tuples_vector = [(df[i, 1], df[i, 2]) for i in 1:num_rows]
@@ -131,10 +139,6 @@ function get_value(vec::Vector{Tuple{String, Float64}}, i::Integer, j::Integer)
         throw(ArgumentError("Index i is out of bounds for the given vector."))
     end
 
-end
-
-function create_array()
-    return [1, 2, 3, 4]
 end
 
 
