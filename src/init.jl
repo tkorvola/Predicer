@@ -73,8 +73,6 @@ end
 
 function solve_hertta(input_data::InputData)
 
-    print_inputdata(input_data)
-
     mc = generate_model(input_data)
 
     solve_model(mc)
