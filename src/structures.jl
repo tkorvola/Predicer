@@ -1134,16 +1134,7 @@ end
 
 """Esyn lisäämät"""
 
-global processes_h = OrderedDict{String, Process}()
-global nodes_h = OrderedDict{String, Node}()
-global markets_h = OrderedDict{String, Market}()
-global groups_h = OrderedDict{String, Group}()
-global time_series = Vector{TimeSeries}()
-global inflowblocks_h = OrderedDict{String, InflowBlock}()
-global genconstraints_h = OrderedDict{String, GenConstraint}()
-global node_diffusion_tuples_h = Vector{Tuple{String, String, Float64}}()
-global node_delay_tuples_h = Vector{Tuple{String, String, Float64, Float64, Float64}}()
-global node_histories_h = OrderedDict{String, NodeHistory}()
+
 
 function empty_data()
 
@@ -1175,7 +1166,7 @@ function print_ordered_dict(ordered_dict::OrderedDict)
     end
 end
 
-"""adding the timeseries should be in this same funcgion? what is that nothing-part?"""
+
 
 function create_node(name::String, is_commodity::Bool=false, is_market::Bool=false, is_inflow::Bool=false, is_state::Bool=false)
     if is_commodity == true && is_market == true
@@ -1185,15 +1176,15 @@ function create_node(name::String, is_commodity::Bool=false, is_market::Bool=fal
     end
 end
 
-function add_to_nodes(node::Node)
-
-    push!(nodes_h, node.name => node)
-
+function create_ordered_dict()::OrderedDict{String, Process}
+    process_h = OrderedDict{String, Process}()
+    # You can add entries or perform other operations on process_h if needed
+    return process_h
 end
 
-function return_nodes()
+function add_to_nodes(node::Node, nodes_h::OrderedDict{String, Node})
 
-    return nodes_h
+    push!(nodes_h, node.name => node)
 
 end
 
@@ -1202,6 +1193,76 @@ end
 function create_topology(source::String, sink::String, capacity::Float64, VOM_cost::Float64, ramp_up::Float64, ramp_down::Float64)
 
     return Topology(source, sink, capacity, VOM_cost, ramp_up, ramp_down, TimeSeriesData())
+
+end
+
+function create_processes()
+
+    processes_h = OrderedDict{String, Process}()
+    processes_h
+
+end
+
+function create_nodes()
+
+    nodes_h = OrderedDict{String, Node}()
+    nodes_h
+
+end
+
+function create_markets()
+
+    markets_h = OrderedDict{String, Market}()
+    markets_h
+
+end
+
+function create_groups()
+
+    groups_h = OrderedDict{String, Group}()
+    groups_h
+
+end
+
+function create_timeseries()
+
+    timeseries = Vector{TimeSeries}()
+    timeseries
+
+end
+
+function create_inflowblocks()
+
+    inflowblocks_h = OrderedDict{String, InflowBlock}()
+    inflowblocks_h
+
+end
+
+function create_genconstraints()
+
+    genconstraints_h = OrderedDict{String, GenConstraint}()
+    genconstraints_h
+
+end
+
+function create_node_diffusion_tuples()
+
+    node_diffusion_tuples_h = Vector{Tuple{String, String, Float64}}()
+    node_diffusion_tuples_h
+
+end
+
+function create_node_delay_tuples()
+
+    node_delay_tuples_h = Vector{Tuple{String, String, Float64, Float64, Float64}}()
+    node_delay_tuples_h
+
+end
+
+function create_node_histories()
+
+    node_histories_h = OrderedDict{String, NodeHistory}()
+    node_histories_h
 
 end
 
@@ -1224,15 +1285,9 @@ function print_process_nodes(processes::OrderedDict{String, Process})
     end
 end
 
-function add_to_processes(process::Process)
+function add_to_processes(process::Process, processes_h::OrderedDict{String, Process})
 
     push!(processes_h, process.name => process)
-
-end
-
-function return_processes()
-
-    return processes_h
 
 end
 
@@ -1295,7 +1350,7 @@ function add_gc_constants(genconstraint::GenConstraint, constants::TimeSeriesDat
 
 end
 
-function add_to_markets(market::Market)
+function add_to_markets(market::Market, markets_h::OrderedDict{String, Market})
 
     push!(markets_h, market.name => market)
 
@@ -1313,7 +1368,7 @@ function create_group(name::String, type::String, member::String)
 
 end
 
-function add_to_groups(group::Group)
+function add_to_groups(group::Group, groups_h::OrderedDict{String, Group})
 
     push!(groups_h, group.name => group)
 
@@ -1332,7 +1387,7 @@ function create_genconstraint(name::String,type::String,is_setpoint=false, penal
 end
 
 
-function add_to_genconstraints(genconstraint::GenConstraint)
+function add_to_genconstraints(genconstraint::GenConstraint, genconstraints_h::OrderedDict{String, GenConstraint})
 
     push!(genconstraints_h, genconstraint.name => genconstraint)
 
@@ -1414,35 +1469,17 @@ function create_state(in_max, out_max, state_loss_proportional, state_max, state
 
 end
 
-function create_node_diffusion_tuple(node1::String, node2::String, diff_coeff::Float64)
+function create_node_diffusion_tuple(node1::String, node2::String, diff_coeff::Float64, node_diffusion_tuples_h::Vector{Tuple{String, String, Float64}})
 
     tup = (node1, node2, diff_coeff)
     push!(node_diffusion_tuples_h, tup)
 
 end
 
-function return_node_diffusion_tuples()
-
-    return node_diffusion_tuples_h
-
-end
-
-function create_node_delay_tuple(node1::String, node2::String, delay_t::Float64, min_flow::Float64, max_flow::Float64)
+function create_node_delay_tuple(node1::String, node2::String, delay_t::Float64, min_flow::Float64, max_flow::Float64, node_delay_tuples_h::Vector{Tuple{String, String, Float64, Float64, Float64}})
 
     tup = (node1, node2, delay_t, min_flow, max_flow)
     push!(node_delay_tuples_h, tup)
-
-end
-
-function return_node_delay_tuples()
-
-    return node_delay_tuples_h
-
-end
-
-function return_node_histories()
-
-    return node_histories_h
 
 end
 
