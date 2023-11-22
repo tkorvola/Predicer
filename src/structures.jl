@@ -1135,22 +1135,6 @@ end
 """Esyn lisäämät"""
 
 
-
-function empty_data()
-
-    empty!(processes_h)
-    empty!(nodes_h)
-    empty!(markets_h)
-    empty!(groups_h)
-    empty!(inflowblocks_h)
-    empty!(genconstraints_h)
-    empty!(node_histories_h)
-    empty!(time_series)
-    empty!(node_diffusion_tuples_h)
-    empty!(node_delay_tuples_h)
-
-end
-
 function print_message(d1::Int, d2::Int, d3::Int, d4::Int)
 
     println(d1)
