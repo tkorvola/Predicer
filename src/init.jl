@@ -73,7 +73,7 @@ end
 
 function solve_hertta(input_data::InputData)
 
-    print_inputdata(input_data)
+    #print_inputdata(input_data)
 
     mc = generate_model(input_data)
 
@@ -83,9 +83,9 @@ function solve_hertta(input_data::InputData)
 
     return df
 
-    """convert_df_to_vector(df)"""
+    #convert_df_to_vector(df)
 
-    """get_process_data(mc, input_data, "v_state", "electricheater", "s1")"""
+    #get_process_data(mc, input_data, "v_state", "electricheater", "s1")
 
 end
 
