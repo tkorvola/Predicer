@@ -51,7 +51,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     for f in args[:file]
         of = replace(f, r"[.][^.]*$" => "") * ".dot"
         println("$f |-> $of")
-        mc, inp = Predicer.generate_model(f)
+        mc, inp = Predicer.get_data(f) |> Predicer.generate_model
         write_graph(of, inp)
     end
 end
