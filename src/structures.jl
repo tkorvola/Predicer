@@ -1134,6 +1134,20 @@ end
 
 """Esyn lisäämät"""
 
+function create_hertta_temporals(ts::Vector{String})
+    ts_format = "yyyy-mm-ddTHH:MM:SSzzzz"  # Define the timestamp format
+    variable_dt = Tuple{String, Float64}[]
+    Temporals(ts, 1.0, false, variable_dt, ts_format)
+end
+
+function create_new_hertta_ts()::Vector{String}
+    return String[]
+end
+
+
+function add_to_hertta_ts(ts::Vector{String}, new_ts::String)
+    push!(ts, new_ts)
+end
 
 function print_message(d1::Int, d2::Int, d3::Int, d4::Int)
 
@@ -1429,24 +1443,6 @@ function add_inflow_to_node(node::Node, timeseriesdata::TimeSeriesData)
 
 end
 
-function create_temporals()
-
-    temps = 
-    ["2022-04-20T00:00:00+00:00",
-    "2022-04-20T01:00:00+00:00",
-    "2022-04-20T02:00:00+00:00",
-    "2022-04-20T03:00:00+00:00",
-    "2022-04-20T04:00:00+00:00",
-    "2022-04-20T05:00:00+00:00",
-    "2022-04-20T06:00:00+00:00",
-    "2022-04-20T07:00:00+00:00",
-    "2022-04-20T08:00:00+00:00",
-    "2022-04-20T09:00:00+00:00"]
-
-    return temps
-
-end
-
 function create_state(in_max, out_max, state_loss_proportional, state_max, state_min=0, initial_state=0, is_temp=0, T_E_conversion=1, residual_value=0)
 
     return State(in_max, out_max, state_loss_proportional, state_max, state_min, initial_state, is_temp, T_E_conversion, residual_value)
@@ -1469,6 +1465,7 @@ end
 
 function create_inputdata(
     
+    temporals::Temporals,
     processes::OrderedDict{String, Process}, 
     nodes::OrderedDict{String, Node}, 
     node_diffusion::Vector{Tuple{String, String, Float64}}, 
@@ -1489,7 +1486,7 @@ function create_inputdata(
     contains_delay::Bool,  
     contains_diffusion::Bool)
 
-    return InputData(Predicer.Temporals(unique(sort(create_temporals()))), contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories, markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
+    return InputData(temporals, contains_reserves, contains_online, contains_states, contains_piecewise_eff, contains_risk, contains_diffusion, contains_delay, processes, nodes, node_diffusion, node_delay, node_histories, markets, groups, scenarios, reserve_type, risk, inflow__blocks, gen_constraints)
 
 end
 

@@ -1057,10 +1057,11 @@ function setup_bidding_constraints(model_contents::OrderedDict, input_data::Pred
             end
         end
     end
+
     for m in keys(markets)
         if markets[m].is_bid
             for (i,t) in enumerate(temporals.t)
-                s_indx = sortperm((price_matr[m][i,:]))
+                s_indx = sortperm(price_matr[m][i,:])
                 if markets[m].type == "energy"
                     for k in 2:length(s_indx)
                         if price_matr[m][i, s_indx[k]] == price_matr[m][i, s_indx[k-1]]
@@ -1084,7 +1085,8 @@ function setup_bidding_constraints(model_contents::OrderedDict, input_data::Pred
                 end
             end
         end
-    end
+    end    
+
 end
 
 """
