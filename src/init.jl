@@ -73,7 +73,7 @@ end
 
 function solve_hertta(input_data::InputData)
 
-    #print_inputdata(input_data)
+    print_inputdata(input_data)
 
     mc = generate_model(input_data)
 
@@ -143,6 +143,10 @@ end
 
 
 function print_inputdata(input_data::InputData)
+
+    println("ALKU----------------------------------------------------contains_reserves")
+    println(input_data.temporals)
+    println("LOPPU----------------------------------------------------")
 
     println("ALKU----------------------------------------------------contains_reserves")
     println(input_data.contains_reserves)
