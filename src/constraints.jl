@@ -387,7 +387,6 @@ function setup_process_balance(model_contents::OrderedDict, input_data::Predicer
             sources_with_s_and_t = map(x -> (x[1], x[2], x[3], s, t), sources)
             sinks_with_s_and_t = map(x -> (x[1], x[2], x[3], s, t), sinks)
             nod_eff[tup] = sum(v_flow[sinks_with_s_and_t]) - (length(sources_with_s_and_t) > 0 ? eff * sum(v_flow[sources_with_s_and_t]) : 0)
-                        #XXX Doesn't this get done below as part of dpbe?
         end
     end
 
