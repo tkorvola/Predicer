@@ -1138,24 +1138,13 @@ Setup constraints for market bidding volumes.
 function setup_bidding_volume_constraints(
         model_contents::OrderedDict, input_data::Predicer.InputData;
         sddp::Bool=false)
-    model = model_contents["model"]
-    b_slots = input_data.bid_slots
-    markets = input_data.markets
+    tups = ((m, bs.slots[i - 1], bs.slots[i], t)
+            for (m, bs) in input_data.bid_slots
+            for i in 2 : length(bs.slots) for t in bs.time_steps)
     v_bid_vol = model_contents["variable"]["v_bid_volume"]
     bid_vol = sddp ? tup -> v_bid_vol[tup].out : tup -> v_bid_vol[tup]
-    for m in keys(b_slots)
-        for t in b_slots[m].time_steps
-            for (i,s) in enumerate(b_slots[m].slots)
-                if i == 1
-                    if markets[m].type == "reserve"
-                        @constraint(model, bid_vol((m,s,t)) >= 0.0)
-                    end
-                else
-                    @constraint(model, bid_vol((m,s,t)) >= bid_vol((m,b_slots[m].slots[i-1],t)))
-                end
-            end
-        end
-    end
+    @constraint(model_contents["model"], bid_vol[(m, s0, s1, t) = tups],
+                bid_vol((m, s1, t)) ≥ bid_vol((m, s0, t)))
 end
 
 """
