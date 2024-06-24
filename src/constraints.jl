@@ -1084,7 +1084,9 @@ Setup constraints for market bidding curves.
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
 - `input_data::OrderedDict`: Dictionary containing data used to build the model. 
 """
-function setup_bidding_curve_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
+function setup_bidding_curve_constraints(
+        model_contents::OrderedDict, input_data::Predicer.InputData;
+        sddp::Bool=false)
     model = model_contents["model"]
     markets = input_data.markets
     b_slots = input_data.bid_slots
@@ -1094,6 +1096,7 @@ function setup_bidding_curve_constraints(model_contents::OrderedDict, input_data
     v_flow = model_contents["variable"]["v_flow"]
     v_flow_bal = model_contents["variable"]["v_flow_bal"]
     v_bid_vol = model_contents["variable"]["v_bid_volume"]
+    bid_vol = sddp ? tup -> v_bid_vol[tup].in : tup -> v_bid_vol[tup]
 
     v_bid = model_contents["expression"]["v_bid"] = OrderedDict()
     e_bid_slot = OrderedDict()
@@ -1114,8 +1117,10 @@ function setup_bidding_curve_constraints(model_contents::OrderedDict, input_data
         p0 = b_slots[tup[1]].prices[(tup[3],bn0)]
         p1 = b_slots[tup[1]].prices[(tup[3],bn1)]
         ps = markets[tup[1]].price(tup[2],tup[3])
-        add_to_expression!(e_bid_slot[tup],v_bid_vol[(tup[1],bn0,tup[3])],1-(ps-p0)/(p1-p0))
-        add_to_expression!(e_bid_slot[tup],v_bid_vol[(tup[1],bn1,tup[3])],(ps-p0)/(p1-p0))
+        add_to_expression!(e_bid_slot[tup],
+                           bid_vol((tup[1],bn0,tup[3])), (p1-ps)/(p1-p0))
+        add_to_expression!(e_bid_slot[tup],
+                           bid_vol((tup[1],bn1,tup[3])), (ps-p0)/(p1-p0))
     end
     bid_slot_eq = @constraint(model, bid_slot_eq[tup in bid_scen_tuple], v_bid[tup] == e_bid_slot[tup])
     model_contents["constraint"]["bid_slot_eq"] = bid_slot_eq
@@ -1130,20 +1135,23 @@ Setup constraints for market bidding volumes.
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
 - `input_data::OrderedDict`: Dictionary containing data used to build the model. 
 """
-function setup_bidding_volume_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
+function setup_bidding_volume_constraints(
+        model_contents::OrderedDict, input_data::Predicer.InputData;
+        sddp::Bool=false)
     model = model_contents["model"]
     b_slots = input_data.bid_slots
     markets = input_data.markets
     v_bid_vol = model_contents["variable"]["v_bid_volume"]
+    bid_vol = sddp ? tup -> v_bid_vol[tup].out : tup -> v_bid_vol[tup]
     for m in keys(b_slots)
         for t in b_slots[m].time_steps
             for (i,s) in enumerate(b_slots[m].slots)
                 if i == 1
                     if markets[m].type == "reserve"
-                        @constraint(model,v_bid_vol[(m,s,t)] >= 0.0)
+                        @constraint(model, bid_vol((m,s,t)) >= 0.0)
                     end
                 else
-                    @constraint(model,v_bid_vol[(m,s,t)]>=v_bid_vol[(m,b_slots[m].slots[i-1],t)])
+                    @constraint(model, bid_vol((m,s,t)) >= bid_vol((m,b_slots[m].slots[i-1],t)))
                 end
             end
         end

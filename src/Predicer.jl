@@ -8,6 +8,8 @@ module Predicer
     include("init.jl")
 
     include("import_input_data.jl")
+
+    include("sddp.jl")
     
 
     export Initialize,
