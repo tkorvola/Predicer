@@ -4,15 +4,20 @@ using DataStructures
 using JuMP
 
 """
-    create_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
+$(TYPEDSIGNATURES)
 
 Create all constraints used in the model.
 
 # Arguments
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
 - `input_data::OrderedDict`: Dictionary containing data used to build the model. 
+- `sddp`: skip the objective function and the CVaR stuff
+   (`setup_cost_calculations` is still done).  Also passed to
+   `setup_bidding_curve_constraints` etc.
 """
-function create_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
+function create_constraints(
+        model_contents::OrderedDict, input_data::Predicer.InputData;
+        sddp::Bool = false)
     setup_reserve_realisation(model_contents, input_data)
     setup_node_balance(model_contents, input_data)
     setup_process_online_balance(model_contents, input_data)
@@ -21,14 +26,16 @@ function create_constraints(model_contents::OrderedDict, input_data::Predicer.In
     setup_process_limits(model_contents, input_data)
     setup_reserve_balances(model_contents, input_data)
     setup_ramp_constraints(model_contents, input_data)
-    setup_bidding_curve_constraints(model_contents, input_data)
+    setup_bidding_curve_constraints(model_contents, input_data; sddp)
     setup_bidding_constraints(model_contents, input_data)
-    setup_bidding_volume_constraints(model_contents, input_data)
+    setup_bidding_volume_constraints(model_contents, input_data; sddp)
     setup_fixed_values(model_contents, input_data)
     setup_generic_constraints(model_contents, input_data)
     setup_cost_calculations(model_contents, input_data)
-    setup_cvar_element(model_contents, input_data)
-    setup_objective_function(model_contents, input_data)
+    if !sddp
+        setup_cvar_element(model_contents, input_data)
+        setup_objective_function(model_contents, input_data)
+    end
     setup_reserve_participation(model_contents, input_data)
     setup_inflow_blocks(model_contents, input_data)
 end

@@ -1,16 +1,20 @@
+using DocStringExtensions
+
 using JuMP
 using DataStructures
 
 """
-    create_variables(model_contents::OrderedDict)
+$(TYPEDSIGNATURES)
 
 Create the variables used in the model, and save them in the model_contents dict.
 
 # Arguments
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
 - `input_data::InputData`: struct containing user input.
+- `sddp`: skip `create_v_risk` (CVaR) and `create_v_bid_volume` (bid slots)
 """
-function create_variables(model_contents::OrderedDict, input_data::InputData)
+function create_variables(
+        model_contents::OrderedDict, input_data::InputData; sddp::Bool = false)
     create_v_flow(model_contents, input_data)
     create_v_load(model_contents, input_data)
     create_v_online(model_contents, input_data)
@@ -18,13 +22,15 @@ function create_variables(model_contents::OrderedDict, input_data::InputData)
     create_v_state(model_contents, input_data)
     create_vq_ramp(model_contents, input_data)
     create_v_flow_op(model_contents, input_data)
-    create_v_risk(model_contents, input_data)
     create_v_balance_market(model_contents, input_data)
     create_v_reserve_online(model_contents,input_data)
     create_v_setpoint(model_contents, input_data)
     create_v_block(model_contents, input_data)
     create_v_node_delay(model_contents, input_data)
-    create_v_bid_volume(model_contents,input_data)
+    if !sddp
+        create_v_risk(model_contents, input_data)
+        create_v_bid_volume(model_contents,input_data)
+    end
 end
 
 
