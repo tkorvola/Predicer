@@ -1,3 +1,5 @@
+using DocStringExtensions
+
 using DataStructures
 using JuMP
 
@@ -1076,13 +1078,16 @@ end
 
 
 """
-    setup_bidding_curve_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
+$(TYPEDSIGNATURES)
 
-Setup constraints for market bidding curves.   
+Interpolation constraints for bid slots.   Match the market
+prices of the scenario to the bid curves and set the scenario bid volumes
+accordingly.  Creates a constraint named `bid_slot_eq`.
 
 # Arguments
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
 - `input_data::OrderedDict`: Dictionary containing data used to build the model. 
+- `sddp`: The bid curve variables are `SDDP.State`.  Their `in` values are used.
 """
 function setup_bidding_curve_constraints(
         model_contents::OrderedDict, input_data::Predicer.InputData;
@@ -1122,18 +1127,20 @@ function setup_bidding_curve_constraints(
         add_to_expression!(e_bid_slot[tup],
                            bid_vol((tup[1],bn1,tup[3])), (ps-p0)/(p1-p0))
     end
-    bid_slot_eq = @constraint(model, bid_slot_eq[tup in bid_scen_tuple], v_bid[tup] == e_bid_slot[tup])
+    @constraint(model, bid_slot_eq[tup in bid_scen_tuple], v_bid[tup] == e_bid_slot[tup])
     model_contents["constraint"]["bid_slot_eq"] = bid_slot_eq
 end
 
 """
-    setup_bidding_volume_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
+$(TYPEDSIGNATURES)
 
-Setup constraints for market bidding volumes.   
+Constrain bid curves to increase for bid slots.  Creates a constraint named
+`bid_vol`.
 
 # Arguments
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
-- `input_data::OrderedDict`: Dictionary containing data used to build the model. 
+- `input_data::OrderedDict`: Dictionary containing data used to build the model.
+- `sddp`: The bid curve variables are `SDDP.State`.  Their `out` values are used.
 """
 function setup_bidding_volume_constraints(
         model_contents::OrderedDict, input_data::Predicer.InputData;
@@ -1150,7 +1157,8 @@ end
 """
     setup_bidding_constraints(model_contents::OrderedDict, input_data::Predicer.InputData)
 
-Setup constraints for market bidding.   
+Constrain bid curves to increase when bid slots are not used.  Creates a
+constraint named `bidding`.
 
 # Arguments
 - `model_contents::OrderedDict`: Dictionary containing all data and structures used in the model. 
