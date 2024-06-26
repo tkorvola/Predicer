@@ -31,9 +31,11 @@ cases = OrderedDict(
 )
 
 # SDDP test cases with lower bounds.
+# I think these have to be for the best scenario, at least for multicut.
+# A bound for the expected cost may do for single cut.
 sddp_cases = [
-    "input_data_bidcurve.xlsx" => -5000
-    "input_data_bidcurve_e.xlsx" => -5000
+    "input_data_bidcurve.xlsx" => -15000
+    "input_data_bidcurve_e.xlsx" => -15000
 ]
 
 inputs = Dict{String, Predicer.InputData}()
@@ -89,9 +91,10 @@ end
           relative_gap(dem), lower_bound)
     risk_measure = Predicer.sddp_risk_measure(inp)
     SDDP.train(pg; risk_measure,
-               #cut_type=SDDP.MULTI_CUT,
-               iteration_limit=100)
+               cut_type=SDDP.MULTI_CUT,
+               #iteration_limit=100,
+               )
     obj_bound = SDDP.calculate_bound(pg; risk_measure)
-    @test obj_bound ≤ obj
+    @test obj - obj_bound ≥ -1e-4
     @show obj_bound
 end
