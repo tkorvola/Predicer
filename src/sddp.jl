@@ -73,3 +73,9 @@ function sddp_policy_graph(inputs::AbstractVector{InputData}; kws...)
         end
     end
 end
+
+sddp_risk_measure(inp::InputData) = (
+    inp.setup.contains_risk
+    ? SDDP.EAVaR(beta = 1 - inp.risk["alfa"], lambda = 1 - inp.risk["beta"])
+    : SDDP.Expectation()
+)
