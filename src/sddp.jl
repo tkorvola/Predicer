@@ -19,7 +19,6 @@ function sddp_create_bid_state(mc::OrderedDict, inp::InputData)
               v_bid_volume[(m, s, t) = bid_slot_tuples(inp)]
               ≥ bid_lower_bound(inp.markets[m]),
               SDDP.State, initial_value=0)
-    mc["variable"]["v_bid_volume"] = v_bid_volume
 end
 
 """
