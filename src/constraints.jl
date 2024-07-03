@@ -226,9 +226,10 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
 
     # setup node history expression
     for n in collect(keys(input_data.node_histories))
-        for ts_data in input_data.node_histories[n].steps.ts_data
-            for ts in ts_data.series
-                add_to_expression!(e_node_bal_eq_history[(n, ts_data.scenario, ts[1])], ts[2])
+        hist = input_data.node_histories[n].steps
+        for s in keys(input_data.scenarios)
+            for ts in hist(s).series
+                add_to_expression!(e_node_bal_eq_history[(n, s, ts[1])], ts[2])
             end
         end
     end

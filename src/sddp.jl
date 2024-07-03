@@ -45,6 +45,16 @@ function sddp_markov_mats(
              for i in 1 : length(inputs))...]
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Return `InputData` for the scenario `scen` subproblem.  `inp` is not modified;
+a shallow copy with modified `scenarios` is returned.
+"""
+function scen_subproblem(inp::InputData, scen::String)
+    @set inp.scenarios = OrderedDict(scen => 1.)
+end
+
 function sddp_policy_graph(inputs::AbstractVector{InputData}; kws...)
     @assert allequal(inp.bid_slots for inp in inputs)
     SDDP.MarkovianPolicyGraph(
@@ -58,7 +68,7 @@ function sddp_policy_graph(inputs::AbstractVector{InputData}; kws...)
         else
             inp = inputs[st - 1]
             scen = [keys(inp.scenarios)...][sc]
-            @reset inp.scenarios = OrderedDict(scen => 1.)
+            inp = scen_subproblem(inp, scen)
         end
         mc = build_model_contents_dict(inp)
         mc["model"] = sp

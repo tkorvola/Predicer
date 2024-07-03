@@ -34,10 +34,10 @@ cases = OrderedDict(
 # SDDP test cases with lower bounds.
 # I think these have to be for the best scenario, at least for multicut.
 # A bound for the expected cost may do for single cut.
-sddp_cases = [
-    "input_data_bidcurve.xlsx" => -15000
-    "input_data_bidcurve_e.xlsx" => -15000
-]
+sddp_cases = OrderedDict(
+    "input_data_bidcurve.xlsx" => -12000,
+    "input_data_bidcurve_e.xlsx" => -12000,
+)
 
 inputs = Dict{String, Predicer.InputData}()
 
@@ -76,6 +76,22 @@ end
     @show objective_value(m) obj relative_gap(m)
 end
 
+@testset "Scenarios on $bn" for (bn, spobj) in cases
+    inp = get_input(bn)
+    mcs = [Predicer.generate_model(Model(Optimizer),
+                                   Predicer.scen_subproblem(inp, sc))
+           for sc in keys(inp.scenarios)]
+    ms = getindex.(mcs, "model")
+    set_silent.(ms)
+    Predicer.solve_model.(mcs)
+    @test all(JuMP.termination_status.(ms) .== MOI.OPTIMAL)
+    min_obj, max_obj = extrema(objective_value.(ms))
+    lower_bound = get(sddp_cases, bn, -Inf)
+    @test min_obj ≥ lower_bound
+    @test min_obj ≤ spobj skip=isnan(spobj)
+    @show lower_bound min_obj spobj max_obj
+end
+
 @testset "SDDP on $bn" for (bn, lower_bound) in sddp_cases
     obj = cases[bn]
     @assert lower_bound ≤ obj
@@ -87,7 +103,7 @@ end
     @test JuMP.termination_status(dem) == MOI.OPTIMAL
     @test(objective_value(dem) ≈ obj, rtol=obj_rtol(dem),
           skip=isnan(obj) || inp.setup.contains_risk)
-    @test objective_value(dem) ≥ lower_bound skip=inp.setup.contains_risk
+    @test objective_value(dem) ≥ lower_bound
     @show(inp.setup.contains_risk, objective_value(dem), obj,
           relative_gap(dem), lower_bound)
     risk_measure = Predicer.sddp_risk_measure(inp)
