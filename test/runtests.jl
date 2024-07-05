@@ -13,6 +13,9 @@ using HiGHS: Optimizer
 #using Cbc: Optimizer
 #using CPLEX: Optimizer
 
+# Turn off all solver logging
+silent = false
+
 # Model definition files and objective values.  obj = NaN to disable
 # comparison.
 cases = OrderedDict(
@@ -67,7 +70,7 @@ end
 
 @testset "Predicer on $bn" for (bn, known_obj) in cases
     m = Model(Optimizer)
-    #set_silent(m)
+    silent && set_silent(m)
     mc = Predicer.generate_model(m, get_input(bn))
     @test m == mc["model"]
     Predicer.solve_model(mc)
@@ -76,7 +79,7 @@ end
     @show objective_value(m) known_obj relative_gap(m)
 end
 
-@testset "Scenarios on $bn" for (bn, spobj) in cases
+@testset "Scenarios on $bn" for (bn, known_obj) in cases
     inp = get_input(bn)
     mcs = [Predicer.generate_model(Model(Optimizer),
                                    Predicer.scen_subproblem(inp, sc))
@@ -88,30 +91,38 @@ end
     min_obj, max_obj = extrema(objective_value.(ms))
     lower_bound = get(sddp_cases, bn, -Inf)
     @test min_obj ≥ lower_bound
-    @test min_obj ≤ spobj skip=isnan(spobj)
-    @show lower_bound min_obj spobj max_obj
+    @test min_obj ≤ known_obj skip=isnan(known_obj)
+    @show lower_bound min_obj known_obj max_obj
 end
 
 @testset "SDDP on $bn" for (bn, lower_bound) in sddp_cases
-    obj = cases[bn]
-    @assert lower_bound ≤ obj
+    known_obj = cases[bn]
+    @assert lower_bound ≤ known_obj
     inp = get_input(bn)
     pg = Predicer.sddp_policy_graph(
         [inp]; lower_bound, optimizer=Optimizer)
     dem = SDDP.deterministic_equivalent(pg, Optimizer)
+    silent && set_silent(dem)
     optimize!(dem)
     @test JuMP.termination_status(dem) == MOI.OPTIMAL
-    @test(objective_value(dem) ≈ obj, rtol=obj_rtol(dem),
-          skip=isnan(obj) || inp.setup.contains_risk)
+    if inp.setup.contains_risk
+        @test(known_obj - objective_value(dem) >= -obj_rtol(dem),
+              skip=isnan(known_obj))
+    else
+        @test(objective_value(dem) ≈ known_obj, rtol=obj_rtol(dem),
+              skip=isnan(known_obj))
+    end
     @test objective_value(dem) ≥ lower_bound
-    @show(inp.setup.contains_risk, objective_value(dem), obj,
-          relative_gap(dem), lower_bound)
+    @show(inp.setup.contains_risk, lower_bound,
+          objective_value(dem), known_obj,
+          relative_gap(dem))
     risk_measure = Predicer.sddp_risk_measure(inp)
     SDDP.train(pg; risk_measure,
                cut_type=SDDP.MULTI_CUT,
+               print_level=silent ? 0 : 1,
                #iteration_limit=100,
                )
     obj_bound = SDDP.calculate_bound(pg; risk_measure)
-    @test obj - obj_bound ≥ -1e-4
-    @show obj_bound
+    @test known_obj - obj_bound ≥ -1e-4
+    @show obj_bound known_obj
 end
