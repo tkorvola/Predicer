@@ -70,7 +70,6 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
 
     # consumer/producer flows and loads
     v_flow = model.obj_dict[:v_flow]
-    ("hp1", "elc", "hp1", "s1", "2022-04-20T00:00:00+00:00")
     reduced_v_flow_inds = unique(map(x -> (x[1:3]), process_topology_tuples(input_data)))
     for n in unique(map(nbt -> nbt[1], balance_node_tuples(input_data)))
         cons_flows = filter(rvfi -> rvfi[2] == n, reduced_v_flow_inds)
@@ -83,7 +82,7 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
             if !isempty(prod_flows)
                 add_to_expression!(e_node_bal_eq_prod[(n, s, t)], sum(v_flow[Predicer.validate_tuples(model_contents, map(x -> (x..., s, t), prod_flows), 4)])) 
             end
-            add_to_expression!(e_constraint_node_bal_eq[(n, s, t)], e_node_bal_eq_prod[(n, s, t)] - e_node_bal_eq_cons[(n, s, t)])
+            add_to_expression!(e_constraint_node_bal_eq[(n, s, t)], (e_node_bal_eq_prod[(n, s, t)] - e_node_bal_eq_cons[(n, s, t)]) * input_data.temporals(t))
         end
     end
 
@@ -113,7 +112,7 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
         v_res_real = model_contents["expression"]["v_res_real"]
         for tup in constraint_indices
             if tup in node_reserves(input_data)
-                add_to_expression!(e_node_bal_eq_res_real[tup], -v_res_real[tup])
+                add_to_expression!(e_node_bal_eq_res_real[tup], -v_res_real[tup] * input_data.temporals(tup[3]))
             end
             add_to_expression!(e_constraint_node_bal_eq[tup], e_node_bal_eq_res_real[tup])
         end
@@ -124,8 +123,8 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
         vq_state_up = model.obj_dict[:vq_state_up]
         vq_state_dw = model.obj_dict[:vq_state_dw]
         for ci in constraint_indices
-            add_to_expression!(e_constraint_node_bal_eq[ci], - vq_state_dw[Predicer.validate_tuple(model_contents, ci, 2)])
-            add_to_expression!(e_constraint_node_bal_eq[ci], vq_state_up[Predicer.validate_tuple(model_contents, ci, 2)])
+            add_to_expression!(e_constraint_node_bal_eq[ci], - vq_state_dw[Predicer.validate_tuple(model_contents, ci, 2)] * input_data.temporals(ci[3]))
+            add_to_expression!(e_constraint_node_bal_eq[ci], vq_state_up[Predicer.validate_tuple(model_contents, ci, 2)] * input_data.temporals(ci[3]))
         end
     end
 
@@ -133,7 +132,7 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
     for n in unique(map(nbt -> nbt[1], balance_node_tuples(input_data)))
         if input_data.nodes[n].is_inflow
             for s in scenarios(input_data), t in input_data.temporals.t
-                inflow_val = input_data.nodes[n].inflow(s, t)
+                inflow_val = input_data.nodes[n].inflow(s, t) * input_data.temporals(t)
                 if input_data.nodes[n].is_state
                     if input_data.nodes[n].state.is_temp
                         inflow_val = inflow_val * input_data.nodes[n].state.t_e_conversion
@@ -201,7 +200,7 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
             end
         end
         for tup in constraint_indices
-            add_to_expression!(e_constraint_node_bal_eq[tup], e_node_bal_eq_diffusion[tup])
+            add_to_expression!(e_constraint_node_bal_eq[tup], e_node_bal_eq_diffusion[tup] * input_data.temporals(tup[3]))
         end
     end
 
@@ -230,6 +229,7 @@ function setup_node_balance(model_contents::OrderedDict, input_data::Predicer.In
         for s in keys(input_data.scenarios)
             for ts in hist(s).series
                 add_to_expression!(e_node_bal_eq_history[(n, s, ts[1])], ts[2])
+                add_to_expression!(e_constraint_node_bal_eq[(n, s, ts[1])], e_node_bal_eq_history[(n, s, ts[1])])
             end
         end
     end
