@@ -7,6 +7,38 @@ using Accessors
 using SDDP
 
 """
+$(TYPEDEF)
+
+The time-independent part of `BidSlot`
+
+$(TYPEDFIELDS)
+"""
+struct BidShape
+    """Number of curves (time slots) to bid"""
+    n_curves::Integer
+    """Names of bid curve points"""
+    slots::Vector{String}
+    """Lower bound for bid volumes.  Non-positive, possibly -Inf."""
+    lower_bound::Float64
+end
+BidShape(m::Market, bs::BidSlot) = BidShape(
+    length(bs.time_steps), bs.slots, bid_lower_bound(m))
+
+"""
+$(TYPEDEF)
+
+Defines the indices of SDDP state variables connecting stages.
+
+$(TYPEDFIELDS)
+"""
+struct StateShape
+    bid_shapes::OrderedDict{String, BidShape}
+end
+StateShape(inp::InputData) = StateShape(
+    OrderedDict(m => BidShape(inp.markets[m], bs)
+                for (m, bs) in inp.bid_slots))
+
+"""
 $(TYPEDSIGNATURES)
 
 Add bid curve state variables.  The markets, bid slots and times are obtained
@@ -14,10 +46,11 @@ from `inp.bid_slots` and must be identical for all stages, which all must call
 this function with `mc["model"]` set to the stage subproblem.  Replaces
 `create_v_bid_volume` for SDDP.
 """
-function sddp_create_bid_state(mc::OrderedDict, inp::InputData)
+function sddp_create_bid_state(mc::OrderedDict, shape::StateShape)
+    tups = [(m, s, t) for (m, bs) in shape.bid_shapes
+                      for s in bs.slots for t in 1 : bs.n_curves]
     @variable(mc["model"],
-              v_bid_volume[(m, s, t) = bid_slot_tuples(inp)]
-              ≥ bid_lower_bound(inp.markets[m]),
+              v_bid_volume[(m, s, t) = tups] ≥ shape.bid_shapes[m].lower_bound,
               SDDP.State, initial_value=0)
 end
 
@@ -56,7 +89,8 @@ function scen_subproblem(inp::InputData, scen::String)
 end
 
 function sddp_policy_graph(inputs::AbstractVector{InputData}; kws...)
-    @assert allequal(inp.bid_slots for inp in inputs)
+    st_shape = StateShape(inputs[1])
+    @assert all((st_shape,) .== StateShape.(inputs[2 : end]))
     SDDP.MarkovianPolicyGraph(
         transition_matrices=sddp_markov_mats(inputs); kws...
     ) do sp, node
@@ -72,7 +106,7 @@ function sddp_policy_graph(inputs::AbstractVector{InputData}; kws...)
         end
         mc = build_model_contents_dict(inp)
         mc["model"] = sp
-        sddp_create_bid_state(mc, inp)
+        sddp_create_bid_state(mc, st_shape)
         if st == 1
             setup_bidding_volume_constraints(mc, inp, sddp=true)
         else

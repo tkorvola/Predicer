@@ -1089,7 +1089,7 @@ function setup_bidding_curve_constraints(
                 p1 = bs.prices[(t, bn1)]
                 ps = markets[m].price(s, t)
                 e_bid_slot[(m, s, t)] = AffExpr(0.0)
-                bid_vol(bn) = (sddp ? v_bid_vol[(m, bn, t)].in
+                bid_vol(bn) = (sddp ? v_bid_vol[(m, bn, ti)].in
                                     : v_bid_vol[(m, bn, t)]) 
                 add_to_expression!(e_bid_slot[(m, s, t)],
                                    bid_vol(bn0), (p1-ps)/(p1-p0))
@@ -1119,7 +1119,8 @@ function setup_bidding_volume_constraints(
     model = model_contents["model"]
     tups = ((m, bs.slots[i - 1], bs.slots[i], t)
             for (m, bs) in input_data.bid_slots
-            for i in 2 : length(bs.slots) for t in bs.time_steps)
+            for i in 2 : length(bs.slots)
+            for t in (sddp ? (1 : length(bs.time_steps)) : bs.time_steps))
     v_bid_vol = model.obj_dict[:v_bid_volume]
     bid_vol = sddp ? tup -> v_bid_vol[tup].out : tup -> v_bid_vol[tup]
     @constraint(model, bid_vol[(m, s0, s1, t) = tups],
