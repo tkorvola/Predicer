@@ -32,8 +32,13 @@ Defines the indices of SDDP state variables connecting stages.
 $(TYPEDFIELDS)
 """
 struct StateShape
+    """Bid shapes by market"""
     bid_shapes::OrderedDict{String, BidShape}
 end
+
+"""
+$(TYPEDSIGNATURES)
+"""
 StateShape(inp::InputData) = StateShape(
     OrderedDict(m => BidShape(inp.markets[m], bs)
                 for (m, bs) in inp.bid_slots))
@@ -47,11 +52,11 @@ this function with `mc["model"]` set to the stage subproblem.  Replaces
 `create_v_bid_volume` for SDDP.
 """
 function sddp_create_bid_state(mc::OrderedDict, shape::StateShape)
-    tups = [(m, s, t) for (m, bs) in shape.bid_shapes
-                      for s in bs.slots for t in 1 : bs.n_curves]
+    bss = shape.bid_shapes
     @variable(mc["model"],
-              v_bid_volume[(m, s, t) = tups] ≥ shape.bid_shapes[m].lower_bound,
-              SDDP.State, initial_value=0)
+              v_bid_volume[m = keys(bss),
+                           s = bss[m].slots, t = 1 : bss[m].n_curves]
+              ≥ bss[m].lower_bound, SDDP.State, initial_value=0)
 end
 
 """
@@ -88,6 +93,17 @@ function scen_subproblem(inp::InputData, scen::String)
     @set inp.scenarios = OrderedDict(scen => 1.)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Create an SDDP policy graph by combining Predicer models created
+from `inputs`.  `kws` is passed to `SDDP.PolicyGraph`.
+
+All `inputs` must define an equal `StateShape`.  The policy graph has
+one more stage than there are `inputs`: the first PG stage just decides
+the first bids and the n + 1st PG stage contains the Predicer model
+of the nth input.
+"""
 function sddp_policy_graph(inputs::AbstractVector{InputData}; kws...)
     st_shape = StateShape(inputs[1])
     @assert all((st_shape,) .== StateShape.(inputs[2 : end]))

@@ -1089,7 +1089,7 @@ function setup_bidding_curve_constraints(
                 p1 = bs.prices[(t, bn1)]
                 ps = markets[m].price(s, t)
                 e_bid_slot[(m, s, t)] = AffExpr(0.0)
-                bid_vol(bn) = (sddp ? v_bid_vol[(m, bn, ti)].in
+                bid_vol(bn) = (sddp ? v_bid_vol[m, bn, ti].in
                                     : v_bid_vol[(m, bn, t)]) 
                 add_to_expression!(e_bid_slot[(m, s, t)],
                                    bid_vol(bn0), (p1-ps)/(p1-p0))
