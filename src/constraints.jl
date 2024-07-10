@@ -1060,40 +1060,46 @@ function setup_bidding_curve_constraints(
         sddp::Bool=false)
     model = model_contents["model"]
     markets = input_data.markets
-    b_slots = input_data.bid_slots
-    bid_scen_tuple = bid_scenario_tuples(input_data)
     process_tuple = process_topology_tuples(input_data)
     balance_process_tuple = create_balance_market_tuple(input_data)
     v_flow = model.obj_dict[:v_flow]
     v_flow_bal = model.obj_dict[:v_flow_bal]
-    v_bid_vol = model.obj_dict[:v_bid_volume]
-    bid_vol = sddp ? tup -> v_bid_vol[tup].in : tup -> v_bid_vol[tup]
 
-    v_bid = model_contents["expression"]["v_bid"] = OrderedDict()
-    e_bid_slot = OrderedDict()
-
-    for tup in bid_scen_tuple
-        v_bid[tup] = AffExpr(0.0)
-        e_bid_slot[tup] = AffExpr(0.0)
+    function compute_v_bid(tup)
+        v = AffExpr(0.0)
         if markets[tup[1]].m_type == "energy"
-            add_to_expression!(v_bid[tup],v_flow[Predicer.validate_tuple(model_contents, filter(x->x[3]==tup[1] && x[5]==tup[3] && x[4]==tup[2],process_tuple)[1], 4)],1.0)
-            add_to_expression!(v_bid[tup],v_flow_bal[Predicer.validate_tuple(model_contents, filter(x->x[1]==tup[1] && x[2]=="up" && x[4]==tup[3] && x[3]==tup[2],balance_process_tuple)[1], 3)],1.0)
-            add_to_expression!(v_bid[tup],v_flow[Predicer.validate_tuple(model_contents, filter(x->x[2]==tup[1] && x[5]==tup[3] && x[4]==tup[2],process_tuple)[1], 4)],-1.0)
-            add_to_expression!(v_bid[tup],v_flow_bal[Predicer.validate_tuple(model_contents, filter(x->x[1]==tup[1] && x[2]=="dw" && x[4]==tup[3] && x[3]==tup[2],balance_process_tuple)[1], 3)],-1.0)
+            add_to_expression!(v, v_flow[Predicer.validate_tuple(model_contents, filter(x->x[3]==tup[1] && x[5]==tup[3] && x[4]==tup[2],process_tuple)[1], 4)],1.0)
+            add_to_expression!(v, v_flow_bal[Predicer.validate_tuple(model_contents, filter(x->x[1]==tup[1] && x[2]=="up" && x[4]==tup[3] && x[3]==tup[2],balance_process_tuple)[1], 3)],1.0)
+            add_to_expression!(v, v_flow[Predicer.validate_tuple(model_contents, filter(x->x[2]==tup[1] && x[5]==tup[3] && x[4]==tup[2],process_tuple)[1], 4)],-1.0)
+            add_to_expression!(v, v_flow_bal[Predicer.validate_tuple(model_contents, filter(x->x[1]==tup[1] && x[2]=="dw" && x[4]==tup[3] && x[3]==tup[2],balance_process_tuple)[1], 3)],-1.0)
         else
-            add_to_expression!(v_bid[tup],v_res_final[tup],1.0)
+            add_to_expression!(v, v_res_final[tup],1.0)
         end
-        bn0 = b_slots[tup[1]].market_price_allocation[(tup[2],tup[3])][1]
-        bn1 = b_slots[tup[1]].market_price_allocation[(tup[2],tup[3])][2]
-        p0 = b_slots[tup[1]].prices[(tup[3],bn0)]
-        p1 = b_slots[tup[1]].prices[(tup[3],bn1)]
-        ps = markets[tup[1]].price(tup[2],tup[3])
-        add_to_expression!(e_bid_slot[tup],
-                           bid_vol((tup[1],bn0,tup[3])), (p1-ps)/(p1-p0))
-        add_to_expression!(e_bid_slot[tup],
-                           bid_vol((tup[1],bn1,tup[3])), (ps-p0)/(p1-p0))
+        return v
     end
-    @constraint(model, bid_slot_eq[tup in bid_scen_tuple], v_bid[tup] == e_bid_slot[tup])
+    v_bid = model_contents["expression"]["v_bid"] = OrderedDict()
+    v_bid_vol = model.obj_dict[:v_bid_volume]
+    e_bid_slot = Dict()
+    for (m, bs) in input_data.bid_slots
+        for s in keys(input_data.scenarios)
+            for (ti, t) in enumerate(bs.time_steps)
+                v_bid[(m, s, t)] = compute_v_bid((m, s, t))
+                bn0, bn1 = bs.market_price_allocation[(s, t)]
+                p0 = bs.prices[(t, bn0)]
+                p1 = bs.prices[(t, bn1)]
+                ps = markets[m].price(s, t)
+                e_bid_slot[(m, s, t)] = AffExpr(0.0)
+                bid_vol(bn) = (sddp ? v_bid_vol[(m, bn, t)].in
+                                    : v_bid_vol[(m, bn, t)]) 
+                add_to_expression!(e_bid_slot[(m, s, t)],
+                                   bid_vol(bn0), (p1-ps)/(p1-p0))
+                add_to_expression!(e_bid_slot[(m, s, t)],
+                                   bid_vol(bn1), (ps-p0)/(p1-p0))
+            end
+        end
+    end
+    @constraint(model, bid_slot_eq[tup in keys(v_bid)],
+                v_bid[tup] == e_bid_slot[tup])
 end
 
 """
