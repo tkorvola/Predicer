@@ -47,7 +47,7 @@ StateShape(inp::InputData) = StateShape(
 $(TYPEDSIGNATURES)
 
 Add bid curve state variables.  The markets, bid slots and times are obtained
-from `inp.bid_slots` and must be identical for all stages, which all must call
+from `shape` and must be identical for all stages, which all must call
 this function with `mc["model"]` set to the stage subproblem.  Replaces
 `create_v_bid_volume` for SDDP.
 """
